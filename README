@@ -1,0 +1,5 @@
+A set of webservices, as a plugin, to extend Moodle 2.3 services. 
+
+Currently it provides get_users(), lacking in the current implementation of Moodle to the date(16/Jun/2012)
+
+To install add this repository content into local/digitalis/ of your moodle installation.
