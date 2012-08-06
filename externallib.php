@@ -303,7 +303,7 @@ private static function user_get_user_details_courses($user) {
  * @param null $course Null only to consider system profile or course to also consider that course's profile.
  * @return bool T if he does, false otherwise
  */
-function can_view_user_details_cap($user, $course = null) {
+private static function can_view_user_details_cap($user, $course = null) {
     if (!empty($course)) {
         $context = get_context_instance(CONTEXT_COURSE, $course->id);
         $usercontext = get_context_instance(CONTEXT_USER, $user->id);
