@@ -127,16 +127,15 @@ class local_digitalis_external extends external_api {
                 $currentuser = ($user->id == $USER->id);
 
                 if ($currentuser or $hasuserupdatecap) {
-                    $userarray['auth']       = $user->auth;
-                    $userarray['confirmed']  = $user->confirmed;
-                    $userarray['idnumber']   = $user->idnumber;
-                    $userarray['lang']       = $user->lang;
-                    $userarray['theme']      = $user->theme;
-                    $userarray['timezone']   = $user->timezone;
-                    $userarray['mailformat'] = $user->mailformat;
+		    $userdetails['auth'] = $user->auth;	
+                    $userdetails['confirmed']  = $user->confirmed;
+                    $userdetails['idnumber']   = $user->idnumber;
+                    $userdetails['lang']       = $user->lang;
+                    $userdetails['theme']      = $user->theme;
+                    $userdetails['timezone']   = $user->timezone;
+                    $userdetails['mailformat'] = $user->mailformat;
                 }
-
-                $result[] = $userdetails;
+		$result[] = $userdetails;
             }
         }
         return $result;
@@ -184,6 +183,17 @@ class local_digitalis_external extends external_api {
                         $value = clean_param($crit['value'], PARAM_USERNAME);
                         if (!empty($result) || $firstcriteria) {
                             $returnedusers = $DB->get_records('user', array('username' => $value), 'id ASC', 'id');
+                            $result = $firstcriteria ? $returnedusers : array_intersect_key($result, $returnedusers);
+                        }
+                    } else {
+                        throw new moodle_exception('missingrequiredcapability', 'webservice', '', $key);
+                    }
+                    break;
+                case 'deleted':
+                    if ($siteadmin) {
+                        $value = clean_param($crit['value'], PARAM_BOOL);
+                        if (!empty($result) || $firstcriteria) {
+                            $returnedusers = $DB->get_records('user', array('deleted' => $value), 'id ASC', 'id');
                             $result = $firstcriteria ? $returnedusers : array_intersect_key($result, $returnedusers);
                         }
                     } else {
