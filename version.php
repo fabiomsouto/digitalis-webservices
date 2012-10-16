@@ -5,7 +5,7 @@
  */
 
 $plugin->requires = 2012061200;
-$plugin->version  = 2012061501;   
+$plugin->version  = 2012101600;   
 $plugin->cron     = 0;
-$plugin->release  = '1.0 (Build: 2012061500)';
+$plugin->release  = '1.1 (Build: 2012061500)';
 $plugin->maturity = MATURITY_STABLE;

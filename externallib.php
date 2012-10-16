@@ -18,8 +18,108 @@ require_once($CFG->libdir . "/externallib.php");
 
 class local_digitalis_external extends external_api {
 
+   /**
+    * Returns description of method parameters
+    *
+    * @return external_function_parameters
+    * @since Moodle 2.3
+    */
+   public static function unenrol_users_parameters() {
+       return new external_function_parameters(
+               array(
+                   'unenrolments' => new external_multiple_structure(
+                           new external_single_structure(
+                                   array(
+                                       'roleid' => new external_value(PARAM_INT, 'Role to unassign from the user'),
+                                       'userid' => new external_value(PARAM_INT, 'The user that is going to be unenrolled'),
+                                       'courseid' => new external_value(PARAM_INT, 'The course to unenrol the user role from')
+                                   )
+                           )
+                   )
+               )
+       );
+   }
 
    /**
+    * Unenrolment of users
+    *
+    * Function throw an exception at the first error encountered.
+    * @param array $unenrolments An array of user unenrolments
+    * @since Moodle 2.3
+    */
+   public static function unenrol_users($unenrolments) {
+       global $DB, $CFG;
+       require_once($CFG->libdir . '/enrollib.php');
+
+       $params = self::validate_parameters(self::unenrol_users_parameters(),
+               array('unenrolments' => $unenrolments));
+
+       $transaction = $DB->start_delegated_transaction(); // Rollback all unenrolment if an error occurs, (except if the DB doesn't support it).
+
+       // Retrieve the manual enrolment plugin.
+       $enrol = enrol_get_plugin('manual');
+       if (empty($enrol)) {
+           throw new moodle_exception('manualpluginnotinstalled', 'enrol_manual');
+       }
+
+       foreach ($params['unenrolments'] as $unenrolment) {
+           // Ensure the current user is allowed to run this function in the enrolment context.
+           $context = get_context_instance(CONTEXT_COURSE, $unenrolment['courseid']);
+           self::validate_context($context);
+
+           // Check that the user has the permission to manual enrol.
+           require_capability('enrol/manual:unenrol', $context);
+
+           // Throw an exception if user is not able to assign the role.
+           $roles = get_assignable_roles($context);
+           if (!key_exists($unenrolment['roleid'], $roles)) {
+               $errorparams = new stdClass();
+               $errorparams->roleid = $unenrolment['roleid'];
+               $errorparams->courseid = $unenrolment['courseid'];
+               $errorparams->userid = $unenrolment['userid'];
+               throw new moodle_exception('wsusercannotassign', 'enrol_manual', '', $errorparams);
+           }
+
+           // Check manual enrolment plugin instance is enabled/exist.
+           $enrolinstances = enrol_get_instances($unenrolment['courseid'], true);
+           foreach ($enrolinstances as $courseenrolinstance) {
+             if ($courseenrolinstance->enrol == "manual") {
+                 $instance = $courseenrolinstance;
+                 break;
+             }
+           }
+           if (empty($instance)) {
+             $errorparams = new stdClass();
+             $errorparams->courseid = $unenrolment['courseid'];
+             throw new moodle_exception('wsnoinstance', 'enrol_manual', $errorparams);
+           }
+
+           // Check that the plugin accept enrolment (it should always the case, it's hard coded in the plugin).
+           if (!$enrol->allow_enrol($instance)) {
+               $errorparams = new stdClass();
+               $errorparams->roleid = $unenrolment['roleid'];
+               $errorparams->courseid = $unenrolment['courseid'];
+               $errorparams->userid = $unenrolment['userid'];
+               throw new moodle_exception('wscannotenrol', 'enrol_manual', '', $errorparams);
+           }
+
+           $enrol->unenrol_user($instance, $unenrolment['userid'], $unenrolment['roleid']);
+       }
+
+       $transaction->allow_commit();
+   }
+
+   /**
+    * Returns description of method result value
+    *
+    * @return null
+    * @since Moodle 2.3
+     */
+   public static function unenrol_users_returns() {
+       return null;
+   }
+
+  /**
    * Returns description of method parameters
    *
    * @return external_function_parameters
